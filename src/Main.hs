@@ -41,12 +41,12 @@ releaseContext (Context r) = do
 
 mkReader :: Context -> Handle -> IO Reader
 mkReader (Context r) hReader = do
-    modifyIORef' r (\Payload{..} -> Payload hCtx (hReader : hReaders) hWriters hGeometries)
+    modifyIORef' r (\p@Payload{..} -> p { hReaders = hReader : hReaders })
     return $ Reader r
 
 mkWriter :: Context -> Handle -> IO Writer
 mkWriter (Context r) hWriter = do
-    modifyIORef' r (\Payload{..} -> Payload hCtx hReaders (hWriter : hWriters) hGeometries)
+    modifyIORef' r (\p@Payload{..} -> p { hWriters = hWriter : hWriters })
     return $ Writer r
 
 withContext :: (Context -> IO a) -> IO a
