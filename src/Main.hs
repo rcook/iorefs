@@ -8,26 +8,26 @@ import Data.IORef
 
 newtype Handle = Handle Int
 
-data Payload = Payload
+data ContextState = ContextState
     { hCtx :: Handle
     , hReaders :: [Handle]
     , hWriters :: [Handle]
     , hGeometries :: [Handle]
     }
 
-type PayloadRef = IORef Payload
+type ContextStateRef = IORef ContextState
 
-data Context = Context PayloadRef
+data Context = Context ContextStateRef
 
-data Reader = Reader PayloadRef
+data Reader = Reader ContextStateRef
 
-data Writer = Writer PayloadRef
+data Writer = Writer ContextStateRef
 
-data Geometry = Geometry PayloadRef
+data Geometry = Geometry ContextStateRef
 
 mkContext :: Handle -> IO Context
 mkContext hCtx = do
-    let payload = Payload hCtx [] [] []
+    let payload = ContextState hCtx [] [] []
     r <- newIORef payload
     return $ Context r
 
@@ -36,24 +36,24 @@ releaseHandle = mapM_
 
 releaseContext :: Context -> IO ()
 releaseContext (Context r) = do
-    Payload{..} <- readIORef r
+    ContextState{..} <- readIORef r
     releaseHandle (\(Handle value) -> putStrLn $ "release geometry " ++ show value) hGeometries
     releaseHandle (\(Handle value) -> putStrLn $ "release writer " ++ show value) hWriters
     releaseHandle (\(Handle value) -> putStrLn $ "release reader " ++ show value) hReaders
 
 mkReader :: Context -> Handle -> IO Reader
 mkReader (Context r) hReader = do
-    modifyIORef' r (\p@Payload{..} -> p { hReaders = hReader : hReaders })
+    modifyIORef' r (\p@ContextState{..} -> p { hReaders = hReader : hReaders })
     return $ Reader r
 
 mkWriter :: Context -> Handle -> IO Writer
 mkWriter (Context r) hWriter = do
-    modifyIORef' r (\p@Payload{..} -> p { hWriters = hWriter : hWriters })
+    modifyIORef' r (\p@ContextState{..} -> p { hWriters = hWriter : hWriters })
     return $ Writer r
 
 readGeometry :: Reader -> Handle -> IO Geometry
 readGeometry (Reader r) hGeometry = do
-    modifyIORef' r (\p@Payload{..} -> p { hGeometries = hGeometry : hGeometries })
+    modifyIORef' r (\p@ContextState{..} -> p { hGeometries = hGeometry : hGeometries })
     return $ Geometry r
 
 withContext :: (Context -> IO a) -> IO a
@@ -61,7 +61,7 @@ withContext = bracket (mkContext $ Handle 100) releaseContext
 
 dump :: Context -> IO ()
 dump (Context r) = do
-    Payload{..} <- readIORef r
+    ContextState{..} <- readIORef r
     putStrLn $ "readerCount=" ++ show (length hReaders)
     putStrLn $ "writerCount=" ++ show (length hWriters)
     putStrLn $ "geometryCount=" ++ show (length hGeometries)
