@@ -1,3 +1,5 @@
+{-# LANGUAGE RecordWildCards #-}
+
 module Main (main) where
 
 import Control.Exception
@@ -32,19 +34,19 @@ releaseHandle = mapM_
 
 releaseContext :: Context -> IO ()
 releaseContext (Context r) = do
-    (Payload hCtx hReaders hWriters hGeometries) <- readIORef r
+    Payload{..} <- readIORef r
     releaseHandle (\(Handle value) -> putStrLn $ "release geometry " ++ show value) hGeometries
     releaseHandle (\(Handle value) -> putStrLn $ "release writer " ++ show value) hWriters
     releaseHandle (\(Handle value) -> putStrLn $ "release reader " ++ show value) hReaders
 
 mkReader :: Context -> Handle -> IO Reader
 mkReader (Context r) hReader = do
-    modifyIORef' r (\(Payload hCtx hReaders hWriters hGeometries) -> Payload hCtx (hReader : hReaders) hWriters hGeometries)
+    modifyIORef' r (\Payload{..} -> Payload hCtx (hReader : hReaders) hWriters hGeometries)
     return $ Reader r
 
 mkWriter :: Context -> Handle -> IO Writer
 mkWriter (Context r) hWriter = do
-    modifyIORef' r (\(Payload hCtx hReaders hWriters hGeometries) -> Payload hCtx hReaders (hWriter : hWriters) hGeometries)
+    modifyIORef' r (\Payload{..} -> Payload hCtx hReaders (hWriter : hWriters) hGeometries)
     return $ Writer r
 
 withContext :: (Context -> IO a) -> IO a
@@ -52,7 +54,7 @@ withContext = bracket (mkContext $ Handle 100) releaseContext
 
 dump :: Context -> IO ()
 dump (Context r) = do
-    (Payload hCtx hReaders hWriters hGeometries) <- readIORef r
+    Payload{..} <- readIORef r
     putStrLn $ "readerCount=" ++ show (length hReaders)
     putStrLn $ "writerCount=" ++ show (length hWriters)
     putStrLn $ "geometryCount=" ++ show (length hGeometries)
