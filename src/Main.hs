@@ -6,7 +6,12 @@ import Data.IORef
 
 newtype Handle = Handle Int
 
-data Payload = Payload Handle [Handle] [Handle] [Handle]
+data Payload = Payload
+    { hCtx :: Handle
+    , hReaders :: [Handle]
+    , hWriters :: [Handle]
+    , hGeometries :: [Handle]
+    }
 
 type PayloadRef = IORef Payload
 
@@ -22,15 +27,15 @@ mkContext hCtx = do
     r <- newIORef payload
     return $ Context r
 
+releaseHandle :: (Handle -> IO ()) -> [Handle] -> IO ()
+releaseHandle f hs = forM_ hs f
+
 releaseContext :: Context -> IO ()
 releaseContext (Context r) = do
     (Payload hCtx hReaders hWriters hGeometries) <- readIORef r
-    forM_ hGeometries $ \(Handle value) -> do
-        putStrLn $ "release geometry " ++ show value
-    forM_ hWriters $ \(Handle value) -> do
-        putStrLn $ "release writer " ++ show value
-    forM_ hReaders $ \(Handle value) -> do
-        putStrLn $ "release reader " ++ show value
+    releaseHandle (\(Handle value) -> putStrLn $ "release geometry " ++ show value) hGeometries
+    releaseHandle (\(Handle value) -> putStrLn $ "release writer " ++ show value) hWriters
+    releaseHandle (\(Handle value) -> putStrLn $ "release reader " ++ show value) hReaders
 
 mkReader :: Context -> Handle -> IO Reader
 mkReader (Context r) hReader = do
