@@ -28,7 +28,7 @@ mkContext hCtx = do
     return $ Context r
 
 releaseHandle :: (Handle -> IO ()) -> [Handle] -> IO ()
-releaseHandle f hs = forM_ hs f
+releaseHandle = mapM_
 
 releaseContext :: Context -> IO ()
 releaseContext (Context r) = do
