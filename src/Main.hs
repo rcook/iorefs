@@ -27,34 +27,34 @@ data Geometry = Geometry ContextStateRef
 
 mkContext :: Handle -> IO Context
 mkContext hCtx = do
-    let payload = ContextState hCtx [] [] []
-    r <- newIORef payload
-    return $ Context r
-
-releaseHandle :: (Handle -> IO ()) -> [Handle] -> IO ()
-releaseHandle = mapM_
+    let s = ContextState hCtx [] [] []
+    sr <- newIORef s
+    return $ Context sr
 
 releaseContext :: Context -> IO ()
-releaseContext (Context r) = do
-    ContextState{..} <- readIORef r
+releaseContext (Context sr) = do
+    ContextState{..} <- readIORef sr
     releaseHandle (\(Handle value) -> putStrLn $ "release geometry " ++ show value) hGeometries
     releaseHandle (\(Handle value) -> putStrLn $ "release writer " ++ show value) hWriters
     releaseHandle (\(Handle value) -> putStrLn $ "release reader " ++ show value) hReaders
+    where
+        releaseHandle :: (Handle -> IO ()) -> [Handle] -> IO ()
+        releaseHandle = mapM_
 
 mkReader :: Context -> Handle -> IO Reader
-mkReader (Context r) hReader = do
-    modifyIORef' r (\p@ContextState{..} -> p { hReaders = hReader : hReaders })
-    return $ Reader r
+mkReader (Context sr) hReader = do
+    modifyIORef' sr (\p@ContextState{..} -> p { hReaders = hReader : hReaders })
+    return $ Reader sr
 
 mkWriter :: Context -> Handle -> IO Writer
-mkWriter (Context r) hWriter = do
-    modifyIORef' r (\p@ContextState{..} -> p { hWriters = hWriter : hWriters })
-    return $ Writer r
+mkWriter (Context sr) hWriter = do
+    modifyIORef' sr (\p@ContextState{..} -> p { hWriters = hWriter : hWriters })
+    return $ Writer sr
 
 readGeometry :: Reader -> Handle -> IO Geometry
-readGeometry (Reader r) hGeometry = do
-    modifyIORef' r (\p@ContextState{..} -> p { hGeometries = hGeometry : hGeometries })
-    return $ Geometry r
+readGeometry (Reader sr) hGeometry = do
+    modifyIORef' sr (\p@ContextState{..} -> p { hGeometries = hGeometry : hGeometries })
+    return $ Geometry sr
 
 withContext :: (Context -> IO a) -> IO a
 withContext = bracket (mkContext $ Handle 100) releaseContext
