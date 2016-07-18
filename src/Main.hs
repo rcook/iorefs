@@ -23,6 +23,8 @@ data Reader = Reader PayloadRef
 
 data Writer = Writer PayloadRef
 
+data Geometry = Geometry PayloadRef
+
 mkContext :: Handle -> IO Context
 mkContext hCtx = do
     let payload = Payload hCtx [] [] []
@@ -49,6 +51,11 @@ mkWriter (Context r) hWriter = do
     modifyIORef' r (\p@Payload{..} -> p { hWriters = hWriter : hWriters })
     return $ Writer r
 
+readGeometry :: Reader -> Handle -> IO Geometry
+readGeometry (Reader r) hGeometry = do
+    modifyIORef' r (\p@Payload{..} -> p { hGeometries = hGeometry : hGeometries })
+    return $ Geometry r
+
 withContext :: (Context -> IO a) -> IO a
 withContext = bracket (mkContext $ Handle 100) releaseContext
 
@@ -65,6 +72,7 @@ main = do
         reader <- mkReader ctx (Handle 200)
         reader <- mkReader ctx (Handle 300)
         reader <- mkReader ctx (Handle 400)
+        g0 <- readGeometry reader (Handle 10)
         writer <- mkWriter ctx (Handle 500)
         dump ctx
         putStrLn "Done"
